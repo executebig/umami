@@ -1,18 +1,17 @@
 import React from 'react';
+import { FormattedMessage } from 'react-intl';
 import MetricsTable from './MetricsTable';
-import styles from './EventsTable.module.css';
+import Tag from 'components/common/Tag';
 
-export default function EventsTable({ websiteId, limit, onExpand, onDataLoad }) {
+export default function EventsTable({ websiteId, ...props }) {
   return (
     <MetricsTable
-      title="Events"
+      {...props}
+      title={<FormattedMessage id="metrics.events" defaultMessage="Events" />}
       type="event"
-      metric="Actions"
+      metric={<FormattedMessage id="metrics.actions" defaultMessage="Actions" />}
       websiteId={websiteId}
-      limit={limit}
       renderLabel={({ x }) => <Label value={x} />}
-      onExpand={onExpand}
-      onDataLoad={onDataLoad}
     />
   );
 }
@@ -21,7 +20,7 @@ const Label = ({ value }) => {
   const [event, label] = value.split(':');
   return (
     <>
-      <span className={styles.type}>{event}</span>
+      <Tag>{event}</Tag>
       {label}
     </>
   );

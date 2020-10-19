@@ -1,18 +1,68 @@
-import { getMetrics } from 'lib/queries';
-import { ok } from 'lib/response';
+import { getPageviewMetrics, getSessionMetrics } from 'lib/queries';
+import { ok, badRequest, methodNotAllowed, unauthorized } from 'lib/response';
+import { DOMAIN_REGEX } from 'lib/constants';
+import { allowQuery } from 'lib/auth';
+
+const sessionColumns = ['browser', 'os', 'device', 'country'];
+const pageviewColumns = ['url', 'referrer'];
+
+function getTable(type) {
+  if (type === 'event') {
+    return 'event';
+  }
+
+  if (sessionColumns.includes(type)) {
+    return 'session';
+  }
+
+  return 'pageview';
+}
+
+function getColumn(type) {
+  if (type === 'event') {
+    return `concat(event_type, ':', event_value)`;
+  }
+  return type;
+}
 
 export default async (req, res) => {
-  const { id, start_at, end_at } = req.query;
-  const websiteId = +id;
-  const startDate = new Date(+start_at);
-  const endDate = new Date(+end_at);
+  if (req.method === 'GET') {
+    if (!(await allowQuery(req))) {
+      return unauthorized(res);
+    }
 
-  const metrics = await getMetrics(websiteId, startDate, endDate);
+    const { id, type, start_at, end_at, domain, url } = req.query;
 
-  const stats = Object.keys(metrics[0]).reduce((obj, key) => {
-    obj[key] = Number(metrics[0][key]) || 0;
-    return obj;
-  }, {});
+    if (domain && !DOMAIN_REGEX.test(domain)) {
+      return badRequest(res);
+    }
 
-  return ok(res, stats);
+    const websiteId = +id;
+    const startDate = new Date(+start_at);
+    const endDate = new Date(+end_at);
+
+    if (sessionColumns.includes(type)) {
+      const data = await getSessionMetrics(websiteId, startDate, endDate, type, { url });
+
+      return ok(res, data);
+    }
+
+    if (type === 'event' || pageviewColumns.includes(type)) {
+      const data = await getPageviewMetrics(
+        websiteId,
+        startDate,
+        endDate,
+        getColumn(type),
+        getTable(type),
+        {
+          domain: type !== 'event' && domain,
+          url: type !== 'url' && url,
+        },
+      );
+
+      return ok(res, data);
+    }
+  }
+
+  return methodNotAllowed(res);
 };

@@ -16,11 +16,14 @@
 # production
 /build
 /public/umami.js
+/public/geo
+/lang-compiled
 
 # misc
 .DS_Store
 .idea
 *.iml
+.vscode/*
 
 # debug
 npm-debug.log*
